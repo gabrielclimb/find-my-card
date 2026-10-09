@@ -1,14 +1,13 @@
 /**
- * Parser tolerante de listas em Markdown no estilo decklist.
+ * Parser de listas de cartas, uma por linha.
  * Adaptado de mtg-deck-visualizer/src/parser/decklist-parser.ts.
  *
  * Aceita, por linha:
- *   - [ ] 2 Lightning Bolt
- *   * [x] 1x Counterspell (MH2) 267
- *   3 Delver of Secrets #blue
- *   Brainstorm
- *   Ponder x2
- * Cabeçalhos (#), linhas vazias, comentários (//), citações e separadores de tabela são ignorados.
+ *   2 Lightning Bolt
+ *   1x Counterspell (MH2) 267
+ *   1 Sol Ring (PLST) BLC-129 *F*
+ *   Delver of Secrets
+ * Linhas vazias e cabeçalhos da exportação do Moxfield/Arena ("SIDEBOARD:", "Commander") são ignorados.
  */
 
 export interface ParsedEntry {
@@ -17,8 +16,6 @@ export interface ParsedEntry {
 	/** Código do set em minúsculas, ex.: "mh2". */
 	set?: string;
 	collectorNumber?: string;
-	/** Linha marcada como `[x]` no Markdown. */
-	found: boolean;
 	lineNumber: number;
 }
 
@@ -31,8 +28,6 @@ export interface ParseError {
 export interface ParseResult {
 	entries: ParsedEntry[];
 	errors: ParseError[];
-	/** Primeiro cabeçalho do texto, útil como nome sugerido da lista. */
-	title?: string;
 }
 
 const MOXFIELD_URL = /moxfield\.com\/decks\/[A-Za-z0-9_-]+/i;
@@ -44,27 +39,9 @@ export function findMoxfieldUrl(source: string): string | undefined {
 	return m?.[0];
 }
 
-const LIST_MARKER = /^(?:[-*+]|\d+[.)])\s+/;
-const CHECKBOX = /^\[([ xX])\]\s*/;
-
-function stripInlineMarkdown(text: string): string {
-	return text
-		.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // [Nome](url)
-		.replace(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g, "$1") // [[Nome]] (wikilink)
-		.replace(/(\*\*|__)(.+?)\1/g, "$2")
-		.replace(/`([^`]+)`/g, "$1")
-		.replace(/~~(.+?)~~/g, "$1");
-}
-
-function extractTrailingTags(rest: string): string {
-	let working = rest.trim();
-	while (true) {
-		const m = working.match(/\s+#[A-Za-z][A-Za-z0-9_-]*\s*$/);
-		if (!m || m.index === undefined) break;
-		working = working.slice(0, m.index).trimEnd();
-	}
-	// Marcadores de acabamento do Moxfield: *F*, *E*, *Foil*
-	return working.replace(/\s+\*[A-Za-z]+\*\s*$/, "").trim();
+/** Marcadores de acabamento do Moxfield: *F*, *E*, *Foil*. */
+function stripFinish(rest: string): string {
+	return rest.replace(/\s+\*[A-Za-z]+\*\s*$/, "").trim();
 }
 
 /** `Ancient Den (MRD) 278` → nome + impressão. */
@@ -81,10 +58,9 @@ function extractSetPrinting(rest: string): { name: string; set?: string; collect
 }
 
 function parseLine(raw: string, lineNumber: number): ParsedEntry | ParseError | null {
-	let line = raw.trim();
+	const line = raw.trim();
 	if (!line) return null;
-	if (line.startsWith("//")) return null;
-	if (/^(?:[-*+]\s+)?<?https?:\/\//i.test(line)) {
+	if (/^https?:\/\//i.test(line)) {
 		return {
 			lineNumber,
 			rawLine: raw,
@@ -95,22 +71,6 @@ function parseLine(raw: string, lineNumber: number): ParsedEntry | ParseError | 
 	}
 	// Cabeçalhos de exportação: "SIDEBOARD:", "Commander", "Deck" (formato Arena).
 	if (/^[A-Za-z ]+:$/.test(line) || SECTION_WORDS.test(line)) return null;
-	if (/^#{1,6}\s/.test(line) || /^#{1,6}$/.test(line)) return null;
-	if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) return null;
-	if (/^\|?[\s:|-]+\|?$/.test(line) && line.includes("-")) return null;
-
-	line = line.replace(/^>+\s*/, "");
-	line = line.replace(LIST_MARKER, "");
-
-	let found = false;
-	const checkbox = line.match(CHECKBOX);
-	if (checkbox) {
-		found = checkbox[1]?.toLowerCase() === "x";
-		line = line.slice(checkbox[0].length);
-	}
-
-	line = stripInlineMarkdown(line).trim();
-	if (!line) return null;
 
 	let quantity = 1;
 	let rest = line;
@@ -118,26 +78,17 @@ function parseLine(raw: string, lineNumber: number): ParsedEntry | ParseError | 
 	if (prefix) {
 		quantity = Number.parseInt(prefix[1] ?? "1", 10);
 		rest = prefix[2] ?? "";
-	} else {
-		const suffix = line.match(/^(.+?)\s+\(?[xX](\d+)\)?$/) ?? line.match(/^(.+?)\s+\(?(\d+)[xX]\)?$/);
-		if (suffix) {
-			rest = suffix[1] ?? "";
-			quantity = Number.parseInt(suffix[2] ?? "1", 10);
-		}
 	}
 
-	const { name, set, collectorNumber } = extractSetPrinting(extractTrailingTags(rest));
-	if (!name || !/[A-Za-z]/.test(name)) {
-		return { lineNumber, rawLine: raw, message: "Não foi possível identificar o nome da carta." };
-	}
-	if (line.includes("|")) {
-		return { lineNumber, rawLine: raw, message: "Tabelas não são suportadas; use uma carta por linha." };
+	const { name, set, collectorNumber } = extractSetPrinting(stripFinish(rest));
+	// Nomes de carta começam com letra (ou aspas, como "Ach! Hans, Run!").
+	if (!/^["'A-Za-zÀ-ÿ]/.test(name)) {
+		return { lineNumber, rawLine: raw, message: "Formato não reconhecido. Use: 2 Lightning Bolt" };
 	}
 
 	return {
 		name,
 		quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
-		found,
 		lineNumber,
 		...(set ? { set, collectorNumber } : {}),
 	};
@@ -148,17 +99,12 @@ export function entryKey(e: { name: string; set?: string; collectorNumber?: stri
 	return e.set && e.collectorNumber ? `${base}|${e.set}|${e.collectorNumber}` : base;
 }
 
-export function parseMarkdownList(source: string): ParseResult {
+export function parseCardList(source: string): ParseResult {
 	const entries: ParsedEntry[] = [];
 	const errors: ParseError[] = [];
 	const byKey = new Map<string, ParsedEntry>();
-	let title: string | undefined;
 
 	source.split(/\r?\n/).forEach((raw, i) => {
-		if (title === undefined) {
-			const h = raw.trim().match(/^#{1,6}\s+(.+)$/);
-			if (h) title = (h[1] ?? "").trim() || undefined;
-		}
 		const parsed = parseLine(raw, i + 1);
 		if (!parsed) return;
 		if ("message" in parsed) {
@@ -170,12 +116,11 @@ export function parseMarkdownList(source: string): ParseResult {
 		const existing = byKey.get(key);
 		if (existing) {
 			existing.quantity += parsed.quantity;
-			existing.found = existing.found && parsed.found;
 			return;
 		}
 		byKey.set(key, parsed);
 		entries.push(parsed);
 	});
 
-	return { entries, errors, title };
+	return { entries, errors };
 }

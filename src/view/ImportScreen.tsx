@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { navigate } from "../app";
-import { findMoxfieldUrl, parseMarkdownList } from "../import/parse-markdown";
+import { findMoxfieldUrl, parseCardList } from "../import/parse-list";
 import { itemsFromEntries, mergeWithPrevious, resolveItems, type ResolveProgress } from "../model/resolve";
 import { getList, newListId, saveList } from "../model/store";
 import type { CardList } from "../model/types";
@@ -27,7 +27,7 @@ export function ImportScreen({ listId }: { listId?: string }) {
 		});
 	}, [listId]);
 
-	const parsed = useMemo(() => parseMarkdownList(source), [source]);
+	const parsed = useMemo(() => parseCardList(source), [source]);
 	const busy = progress !== null;
 
 	const onFile = async (e: Event) => {
@@ -35,7 +35,7 @@ export function ImportScreen({ listId }: { listId?: string }) {
 		if (!file) return;
 		const text = await file.text();
 		setSource(text);
-		if (!name) setName(parseMarkdownList(text).title ?? file.name.replace(/\.(md|markdown|txt)$/i, ""));
+		if (!name) setName(file.name.replace(/\.[a-z0-9]+$/i, ""));
 	};
 
 	const onSubmit = async (e: Event) => {
@@ -50,7 +50,7 @@ export function ImportScreen({ listId }: { listId?: string }) {
 			const now = Date.now();
 			const list: CardList = {
 				id: existing?.id ?? newListId(),
-				name: name.trim() || parsed.title || defaultName(),
+				name: name.trim() || defaultName(),
 				source,
 				items: resolved,
 				offline: existing?.offline ?? false,
@@ -83,13 +83,13 @@ export function ImportScreen({ listId }: { listId?: string }) {
 					<input
 						type="text"
 						value={name}
-						placeholder={parsed.title ?? defaultName()}
+						placeholder={defaultName()}
 						onInput={(e) => setName(e.currentTarget.value)}
 						disabled={busy}
 					/>
 				</label>
 				<label class="field">
-					<span>Cartas em Markdown</span>
+					<span>Cartas, uma por linha</span>
 					<textarea
 						value={source}
 						rows={12}
@@ -101,13 +101,12 @@ export function ImportScreen({ listId }: { listId?: string }) {
 					/>
 				</label>
 				<label class="btn btn-secondary file-btn">
-					Abrir arquivo .md
-					<input type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={onFile} disabled={busy} />
+					Abrir arquivo .txt
+					<input type="file" accept=".txt,.md,text/plain" onChange={onFile} disabled={busy} />
 				</label>
 
 				<p class="import-summary">
 					{parsed.entries.length} cartas diferentes · {totalCopies} cópias
-					{parsed.entries.some((e) => e.found) && ` · ${parsed.entries.filter((e) => e.found).length} já marcadas [x]`}
 				</p>
 				{moxfieldUrl && (
 					<div class="callout">

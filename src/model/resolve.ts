@@ -1,4 +1,4 @@
-import { entryKey, type ParsedEntry } from "../import/parse-markdown";
+import { entryKey, type ParsedEntry } from "../import/parse-list";
 import { COLLECTION_BATCH_SIZE, fetchCollection, fetchNamedFuzzy } from "../scryfall/client";
 import type { CollectionIdentifier, ScryfallCard } from "../scryfall/types";
 import { toCardInfo } from "./card-info";
@@ -28,7 +28,7 @@ export function itemsFromEntries(entries: ParsedEntry[]): ListItem[] {
 		key: entryKey(e),
 		name: e.name,
 		quantity: e.quantity,
-		found: e.found,
+		found: false,
 		order,
 		...(e.set ? { set: e.set, collectorNumber: e.collectorNumber } : {}),
 	}));

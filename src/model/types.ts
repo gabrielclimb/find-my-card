@@ -23,7 +23,7 @@ export interface CardInfo {
 export interface ListItem {
 	/** Chave estável derivada do nome/impressão importados (ver `entryKey`). */
 	key: string;
-	/** Nome como escrito no Markdown. */
+	/** Nome como escrito na lista importada. */
 	name: string;
 	quantity: number;
 	set?: string;

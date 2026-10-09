@@ -21,7 +21,7 @@ export function HomeScreen() {
 				{lists === null ? null : lists.length === 0 ? (
 					<div class="empty">
 						<p class="empty-title">Nenhuma lista ainda</p>
-						<p>Cole uma lista em Markdown, uma carta por linha, e consulte as imagens enquanto procura no bulk.</p>
+						<p>Cole uma lista com uma carta por linha e consulte as imagens enquanto procura no bulk.</p>
 						<pre class="example">{"2 Lightning Bolt\n1 Counterspell (MH2) 267\nDelver of Secrets"}</pre>
 					</div>
 				) : (
