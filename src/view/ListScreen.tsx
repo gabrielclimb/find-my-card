@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { navigate } from "../app";
-import { countQuantities, filterItems, groupItems } from "../lib/grouping";
+import { countQuantities, filterItems, groupItems, type Group } from "../lib/grouping";
 import { cacheImages, listImageUrls, releaseImages, requestPersistentStorage } from "../lib/offline";
 import { forgetPrefs, loadPrefs, savePrefs, type ViewPrefs } from "../lib/prefs";
 import { useWakeLock } from "../lib/wake-lock";
@@ -8,7 +8,7 @@ import { cardImages } from "../model/card-info";
 import { deleteList, getAllLists, getList, saveList } from "../model/store";
 import type { CardInfo, CardList, ListItem } from "../model/types";
 import { CardGrid } from "./CardGrid";
-import { CardOverlay } from "./CardOverlay";
+import { CardOverlay, type OverlayNav } from "./CardOverlay";
 import { useBackDismiss } from "./hooks";
 import { BackIcon, CloseIcon, GridIcon, ListIcon, MenuIcon, SearchIcon, SunIcon, SunOffIcon } from "./icons";
 import { MenuSheet, type OfflineStatus } from "./MenuSheet";
@@ -20,6 +20,10 @@ export function ListScreen({ listId }: { listId: string }) {
 	const [query, setQuery] = useState("");
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [openKey, setOpenKey] = useState<string | null>(null);
+	// Ordem das cartas ao abrir o overlay; fica fixa enquanto ele está aberto.
+	const [navKeys, setNavKeys] = useState<string[]>([]);
+	const [enterFrom, setEnterFrom] = useState<OverlayNav["enterFrom"]>();
+	const visibleRef = useRef<Group[]>([]);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [offline, setOffline] = useState<OfflineStatus>({ busy: false, done: 0, total: 0, failed: 0 });
 	const [toast, setToast] = useState<string | null>(null);
@@ -84,7 +88,11 @@ export function ListScreen({ listId }: { listId: string }) {
 	};
 
 	const toggleFound = useCallback((item: ListItem) => updateItem(item.key, (i) => ({ ...i, found: !i.found })), [updateItem]);
-	const openItem = useCallback((item: ListItem) => setOpenKey(item.key), []);
+	const openItem = useCallback((item: ListItem) => {
+		setNavKeys(visibleRef.current.flatMap((g) => g.items.map((i) => i.key)));
+		setEnterFrom(undefined);
+		setOpenKey(item.key);
+	}, []);
 	const closeOverlay = useCallback(() => setOpenKey(null), []);
 	const closeMenu = useCallback(() => setMenuOpen(false), []);
 	useBackDismiss(openKey !== null, closeOverlay);
@@ -130,10 +138,37 @@ export function ListScreen({ listId }: { listId: string }) {
 		[list, query, prefs.hideFound, prefs.sort],
 	);
 
+	visibleRef.current = visible;
+
+	// Pré-carrega as imagens vizinhas para a troca por deslize ser instantânea.
+	useEffect(() => {
+		if (!openKey || !list) return;
+		const i = navKeys.indexOf(openKey);
+		for (const key of [navKeys[i - 1], navKeys[i + 1]]) {
+			const src = key ? list.items.find((it) => it.key === key)?.card?.faces[0]?.image : undefined;
+			if (src) new Image().src = src;
+		}
+	}, [openKey, navKeys, list]);
+
 	if (!list) return <div class="screen" />;
 
 	const { found, total } = countQuantities(list.items);
 	const openItemData = openKey ? list.items.find((i) => i.key === openKey) : undefined;
+	const navSeq = navKeys.filter((k) => list.items.some((i) => i.key === k));
+	const navIndex = openKey ? navSeq.indexOf(openKey) : -1;
+	const goTo = (offset: -1 | 1) => () => {
+		const key = navSeq[navIndex + offset];
+		if (!key) return;
+		setEnterFrom(offset > 0 ? "right" : "left");
+		setOpenKey(key);
+	};
+	const nav: OverlayNav = {
+		index: Math.max(0, navIndex),
+		total: navSeq.length,
+		onPrev: navIndex > 0 ? goTo(-1) : undefined,
+		onNext: navIndex >= 0 && navIndex < navSeq.length - 1 ? goTo(1) : undefined,
+		enterFrom,
+	};
 	const showHeaders = prefs.sort !== "name";
 	const visibleCount = visible.reduce((n, g) => n + g.items.length, 0);
 
@@ -217,6 +252,7 @@ export function ListScreen({ listId }: { listId: string }) {
 				<CardOverlay
 					key={openItemData.key}
 					item={openItemData}
+					nav={nav}
 					onClose={() => history.back()}
 					onToggleFound={() => toggleFound(openItemData)}
 					onChangeCard={(card: CardInfo) => {

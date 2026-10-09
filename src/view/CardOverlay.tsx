@@ -1,14 +1,27 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { displayName } from "../lib/grouping";
 import { toCardInfo } from "../model/card-info";
 import { resolveItems } from "../model/resolve";
 import type { CardInfo, ListItem } from "../model/types";
 import { fetchPrints } from "../scryfall/client";
 import type { ScryfallCard } from "../scryfall/types";
-import { ArtIcon, CheckIcon, CloseIcon, FlipIcon } from "./icons";
+import { ArtIcon, BackIcon, CheckIcon, CloseIcon, FlipIcon } from "./icons";
+
+export interface OverlayNav {
+	index: number;
+	total: number;
+	onPrev?: () => void;
+	onNext?: () => void;
+	/** Lado de onde a carta entra, para a animação após deslizar. */
+	enterFrom?: "left" | "right";
+}
+
+/** Distância mínima, em px, para um arrasto horizontal contar como troca de carta. */
+const SWIPE_THRESHOLD_PX = 60;
 
 interface Props {
 	item: ListItem;
+	nav: OverlayNav;
 	onClose: () => void;
 	onToggleFound: () => void;
 	onChangeCard: (card: CardInfo) => void;
@@ -16,14 +29,65 @@ interface Props {
 	onRemove: () => void;
 }
 
-export function CardOverlay({ item, onClose, onToggleFound, onChangeCard, onReplaceItem, onRemove }: Props) {
+export function CardOverlay({ item, nav, onClose, onToggleFound, onChangeCard, onReplaceItem, onRemove }: Props) {
 	const [face, setFace] = useState(0);
 	const [mode, setMode] = useState<"card" | "prints">("card");
+	const [dragX, setDragX] = useState(0);
+	const drag = useRef<{ x: number; y: number; horizontal?: boolean; moved: boolean } | null>(null);
 
 	useEffect(() => {
 		document.body.classList.add("no-scroll");
 		return () => document.body.classList.remove("no-scroll");
 	}, []);
+
+	useEffect(() => {
+		if (mode !== "card") return;
+		const onKey = (e: KeyboardEvent) => {
+			if (e.target instanceof HTMLInputElement) return;
+			if (e.key === "ArrowLeft") nav.onPrev?.();
+			if (e.key === "ArrowRight") nav.onNext?.();
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [mode, nav]);
+
+	const swipe = {
+		onPointerDown(e: PointerEvent) {
+			drag.current = { x: e.clientX, y: e.clientY, moved: false };
+		},
+		onPointerMove(e: PointerEvent) {
+			const d = drag.current;
+			if (!d) return;
+			const dx = e.clientX - d.x;
+			const dy = e.clientY - d.y;
+			if (d.horizontal === undefined && Math.hypot(dx, dy) > 8) {
+				d.horizontal = Math.abs(dx) > Math.abs(dy);
+				// Só captura depois de reconhecer o deslize, para não desviar toques em botões e na imagem.
+				if (d.horizontal) (e.currentTarget as Element).setPointerCapture(e.pointerId);
+			}
+			if (!d.horizontal) return;
+			d.moved = true;
+			// Resistência na primeira/última carta.
+			const atEdge = (dx > 0 && !nav.onPrev) || (dx < 0 && !nav.onNext);
+			setDragX(atEdge ? dx / 4 : dx);
+		},
+		onPointerUp(e: PointerEvent) {
+			const d = drag.current;
+			if (d?.horizontal) {
+				const dx = e.clientX - d.x;
+				if (dx <= -SWIPE_THRESHOLD_PX && nav.onNext) nav.onNext();
+				else if (dx >= SWIPE_THRESHOLD_PX && nav.onPrev) nav.onPrev();
+			}
+			setDragX(0);
+			// Mantém `moved` até o click que vem logo depois do pointerup.
+			setTimeout(() => (drag.current = null), 0);
+		},
+		onPointerCancel() {
+			drag.current = null;
+			setDragX(0);
+		},
+	};
+	const wasSwipe = () => drag.current?.moved === true;
 
 	const card = item.card;
 	const faces = card?.faces ?? [];
@@ -35,6 +99,7 @@ export function CardOverlay({ item, onClose, onToggleFound, onChangeCard, onRepl
 				<div class="overlay-title">
 					<strong>{current?.name ?? displayName(item)}</strong>
 					<small>
+						{nav.total > 1 ? `${nav.index + 1} de ${nav.total} · ` : ""}
 						{item.quantity > 1 ? `${item.quantity} cópias · ` : ""}
 						{card ? `${card.setName ?? card.set.toUpperCase()} #${card.collectorNumber}` : ""}
 					</small>
@@ -57,17 +122,32 @@ export function CardOverlay({ item, onClose, onToggleFound, onChangeCard, onRepl
 				/>
 			) : card ? (
 				<>
-					<div class="overlay-body" onClick={(e) => e.target === e.currentTarget && onClose()}>
+					<div
+						class="overlay-body"
+						{...swipe}
+						onClick={(e) => !wasSwipe() && e.target === e.currentTarget && onClose()}
+					>
+						{nav.onPrev && (
+							<button class="nav-btn nav-prev" aria-label="Carta anterior" onClick={nav.onPrev}>
+								<BackIcon />
+							</button>
+						)}
 						{current?.image ? (
 							<img
-								class="overlay-img"
+								class={`overlay-img${dragX === 0 && nav.enterFrom ? ` enter-${nav.enterFrom}` : ""}`}
+								style={dragX ? { transform: `translateX(${dragX}px)`, transition: "none" } : undefined}
 								src={current.image}
 								alt={current.name}
 								draggable={false}
-								onClick={() => faces.length > 1 && setFace((face + 1) % faces.length)}
+								onClick={() => !wasSwipe() && faces.length > 1 && setFace((face + 1) % faces.length)}
 							/>
 						) : (
 							<p class="muted">Sem imagem disponível.</p>
+						)}
+						{nav.onNext && (
+							<button class="nav-btn nav-next" aria-label="Próxima carta" onClick={nav.onNext}>
+								<BackIcon />
+							</button>
 						)}
 					</div>
 					<div class="overlay-actions">

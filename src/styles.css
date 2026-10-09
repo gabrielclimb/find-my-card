@@ -431,11 +431,14 @@ button {
 	flex: 1;
 	min-height: 0;
 	display: grid;
+	grid-template: minmax(0, 1fr) / minmax(0, 1fr);
 	place-items: center;
 	padding: 12px;
 }
 
 .overlay-img {
+	/* Trilho de grade com altura definida: max-height 100% faz a carta caber inteira, em pé ou deitado. */
+	grid-area: 1 / 1;
 	max-width: 100%;
 	max-height: 100%;
 	border-radius: 4.75% / 3.5%;
@@ -889,4 +892,72 @@ button {
 .callout a {
 	color: var(--accent);
 	font-weight: 600;
+}
+
+/* Navegação entre cartas no overlay */
+.overlay-body {
+	position: relative;
+	touch-action: none;
+	overflow: hidden;
+}
+
+.overlay-img {
+	transition: transform 0.15s ease-out;
+}
+
+.overlay-img.enter-right {
+	animation: enter-right 0.18s ease-out;
+}
+
+.overlay-img.enter-left {
+	animation: enter-left 0.18s ease-out;
+}
+
+@keyframes enter-right {
+	from {
+		transform: translateX(40%);
+		opacity: 0;
+	}
+}
+
+@keyframes enter-left {
+	from {
+		transform: translateX(-40%);
+		opacity: 0;
+	}
+}
+
+.nav-btn {
+	position: absolute;
+	top: 50%;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 56px;
+	margin-top: -28px;
+	padding: 0;
+	border: 0;
+	border-radius: 8px;
+	background: rgba(42, 46, 54, 0.75);
+	color: #f4f1ea;
+}
+
+.nav-prev {
+	left: 4px;
+}
+
+.nav-next {
+	right: 4px;
+}
+
+.nav-next svg {
+	transform: scaleX(-1);
+}
+
+/* No celular o gesto basta; as setas ficam só em telas com mouse. */
+@media (hover: none) and (pointer: coarse) {
+	.nav-btn {
+		display: none;
+	}
 }
