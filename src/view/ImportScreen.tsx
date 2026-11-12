@@ -4,18 +4,21 @@ import { findMoxfieldUrl, parseCardList } from "../import/parse-list";
 import { itemsFromEntries, mergeWithPrevious, resolveItems, type ResolveProgress } from "../model/resolve";
 import { getList, newListId, saveList } from "../model/store";
 import type { CardList } from "../model/types";
+import { decodeShare } from "../share/share-list";
 import { BackIcon } from "./icons";
 
 function defaultName(): string {
 	return `Lista de ${new Date().toLocaleDateString("pt-BR")}`;
 }
 
-export function ImportScreen({ listId }: { listId?: string }) {
+/** `listId`: editar uma lista existente. `shared`: conteúdo de um link compartilhado (`#/import/...`). */
+export function ImportScreen({ listId, shared }: { listId?: string; shared?: string }) {
 	const [existing, setExisting] = useState<CardList | null>(null);
 	const [name, setName] = useState("");
 	const [source, setSource] = useState("");
 	const [progress, setProgress] = useState<ResolveProgress | null>(null);
 	const [failure, setFailure] = useState<string | null>(null);
+	const [fromShare, setFromShare] = useState(false);
 
 	useEffect(() => {
 		if (!listId) return;
@@ -26,6 +29,18 @@ export function ImportScreen({ listId }: { listId?: string }) {
 			setSource(list.source);
 		});
 	}, [listId]);
+
+	useEffect(() => {
+		if (!shared) return;
+		decodeShare(shared).then(
+			(list) => {
+				setName(list.name);
+				setSource(list.text);
+				setFromShare(true);
+			},
+			() => setFailure("Este link de lista está incompleto ou corrompido. Peça para enviarem de novo, ou o texto da lista."),
+		);
+	}, [shared]);
 
 	const parsed = useMemo(() => parseCardList(source), [source]);
 	const busy = progress !== null;
@@ -78,6 +93,13 @@ export function ImportScreen({ listId }: { listId?: string }) {
 				<h1 class="topbar-title">{existing ? "Editar lista" : "Nova lista"}</h1>
 			</header>
 			<form class="import" onSubmit={onSubmit}>
+				{fromShare && (
+					<div class="callout">
+						<p>
+							<strong>Lista compartilhada.</strong> Revise as cartas e toque em <strong>Importar</strong> para salvá-la neste aparelho.
+						</p>
+					</div>
+				)}
 				<label class="field">
 					<span>Nome</span>
 					<input

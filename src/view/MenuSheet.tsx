@@ -1,9 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
-import type { SortMode } from "../lib/grouping";
+import { RARITY_FILTERS, type SortMode } from "../lib/grouping";
 import { offlineSupported, storageEstimate } from "../lib/offline";
 import { MAX_COLUMNS, MIN_COLUMNS, type ViewMode, type ViewPrefs } from "../lib/prefs";
 import type { WakeLockState } from "../lib/wake-lock";
-import type { CardList } from "../model/types";
+import { CopyIcon, ShareIcon } from "./icons";
+import type { CardList, Rarity } from "../model/types";
 
 export interface OfflineStatus {
 	busy: boolean;
@@ -22,12 +23,15 @@ interface Props {
 	onToggleOffline: (on: boolean) => void;
 	onEdit: () => void;
 	onResetFound: () => void;
+	onShareLink: () => void;
+	onCopyText: () => void;
 	onDelete: () => void;
 	onClose: () => void;
 }
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-	{ value: "color-name", label: "Cor e nome" },
+	{ value: "color-name", label: "Cor" },
+	{ value: "rarity-name", label: "Raridade" },
 	{ value: "name", label: "Nome" },
 ];
 
@@ -74,6 +78,11 @@ export function MenuSheet(props: Props) {
 				<div class="field">
 					<span>Organizar por</span>
 					<Segmented options={SORT_OPTIONS} value={prefs.sort} onChange={(sort) => onPrefs({ sort })} />
+				</div>
+
+				<div class="field">
+					<span>Filtrar por raridade{prefs.rarities.length === 0 ? " · todas" : ""}</span>
+					<RarityChips value={prefs.rarities} onChange={(rarities) => onPrefs({ rarities })} />
 				</div>
 
 				<label class="field">
@@ -131,6 +140,14 @@ export function MenuSheet(props: Props) {
 				{offline.busy && <progress class="progress" value={offline.done} max={Math.max(1, offline.total)} />}
 
 				<div class="sheet-actions">
+					<div class="sheet-actions-row">
+						<button class="btn btn-secondary" onClick={props.onShareLink}>
+							<ShareIcon size={18} /> Compartilhar link
+						</button>
+						<button class="btn btn-secondary" onClick={props.onCopyText}>
+							<CopyIcon size={18} /> Copiar texto
+						</button>
+					</div>
 					<button class="btn btn-secondary" onClick={props.onEdit}>
 						Editar / reimportar
 					</button>
@@ -169,6 +186,27 @@ function Segmented<T extends string>({
 					{o.label}
 				</button>
 			))}
+		</div>
+	);
+}
+
+function RarityChips({ value, onChange }: { value: Rarity[]; onChange: (value: Rarity[]) => void }) {
+	return (
+		<div class="chips" role="group" aria-label="Raridades">
+			{RARITY_FILTERS.map((r) => {
+				const on = value.includes(r.value);
+				return (
+					<button
+						key={r.value}
+						type="button"
+						class={`chip rarity-${r.value}${on ? " is-active" : ""}`}
+						aria-pressed={on}
+						onClick={() => onChange(on ? value.filter((v) => v !== r.value) : [...value, r.value])}
+					>
+						{r.label}
+					</button>
+				);
+			})}
 		</div>
 	);
 }

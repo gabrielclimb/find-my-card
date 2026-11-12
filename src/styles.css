@@ -22,6 +22,12 @@
 	--c-L: #a0835c;
 	--c-X: #e5646a;
 
+	--r-common: #c4c7cc;
+	--r-uncommon: #a9c4d6;
+	--r-rare: #e0bc5a;
+	--r-mythic: #f0703a;
+	--r-special: #b07fd6;
+
 	color-scheme: dark;
 }
 
@@ -38,6 +44,11 @@
 		--found: #23885a;
 		--c-W: #c9b56a;
 		--c-B: #4f4653;
+		--r-common: #4a4d52;
+		--r-uncommon: #5f7a8c;
+		--r-rare: #a8841f;
+		--r-mythic: #c94e1b;
+		--r-special: #7d4fa3;
 		color-scheme: light;
 	}
 }
@@ -199,6 +210,34 @@ button {
 .color-L { --pip: var(--c-L); }
 .color-X { --pip: var(--c-X); }
 .color-all { --pip: transparent; }
+.color-r-mythic { --pip: var(--r-mythic); }
+.color-r-rare { --pip: var(--r-rare); }
+.color-r-uncommon { --pip: var(--r-uncommon); }
+.color-r-common { --pip: var(--r-common); }
+.color-r-special { --pip: var(--r-special); }
+.color-r-none { --pip: var(--border); }
+
+.filter-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 4px 4px 16px;
+	background: var(--surface-2);
+	font-size: 14px;
+}
+
+.filter-bar-text {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.filter-bar .icon-btn {
+	width: 40px;
+	height: 40px;
+}
 
 /* Grade de imagens */
 .grid {
@@ -557,6 +596,17 @@ button {
 	padding-top: 4px;
 }
 
+.sheet-actions-row {
+	display: flex;
+	gap: 8px;
+	width: 100%;
+}
+
+.sheet-actions-row .btn {
+	flex: 1;
+	padding: 0 10px;
+}
+
 .field {
 	display: flex;
 	flex-direction: column;
@@ -610,6 +660,45 @@ button {
 }
 
 .segmented button.is-active {
+	background: var(--accent);
+	color: var(--accent-text);
+	font-weight: 600;
+}
+
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 40px;
+	padding: 0 14px;
+	border: 1px solid var(--border);
+	border-radius: 20px;
+	background: var(--bg);
+	color: var(--text);
+	font-size: 15px;
+}
+
+.chip::before {
+	content: "";
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--pip);
+}
+
+.chip.rarity-common { --pip: var(--r-common); }
+.chip.rarity-uncommon { --pip: var(--r-uncommon); }
+.chip.rarity-rare { --pip: var(--r-rare); }
+.chip.rarity-mythic { --pip: var(--r-mythic); }
+
+.chip.is-active {
+	border-color: var(--accent);
 	background: var(--accent);
 	color: var(--accent-text);
 	font-weight: 600;

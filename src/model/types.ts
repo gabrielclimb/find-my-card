@@ -1,3 +1,11 @@
+export type Rarity = "common" | "uncommon" | "rare" | "mythic" | "special" | "bonus";
+
+export const RARITIES: readonly Rarity[] = ["common", "uncommon", "rare", "mythic", "special", "bonus"];
+
+export function isRarity(value: unknown): value is Rarity {
+	return typeof value === "string" && (RARITIES as readonly string[]).includes(value);
+}
+
 export interface CardFaceInfo {
 	name: string;
 	/** Imagem `normal` (488×680) do Scryfall. */
@@ -16,6 +24,8 @@ export interface CardInfo {
 	set: string;
 	setName?: string;
 	collectorNumber: string;
+	/** Raridade da impressão. Ausente em listas salvas antes de existir o campo. */
+	rarity?: Rarity;
 	faces: CardFaceInfo[];
 	printsUri?: string;
 }

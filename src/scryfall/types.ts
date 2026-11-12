@@ -25,6 +25,7 @@ export interface ScryfallCard {
 	card_faces?: ScryfallCardFace[];
 	prints_search_uri?: string;
 	released_at?: string;
+	rarity?: string;
 }
 
 export interface ScryfallList<T> {
@@ -35,4 +36,4 @@ export interface ScryfallList<T> {
 	not_found?: CollectionIdentifier[];
 }
 
-export type CollectionIdentifier = { name: string } | { set: string; collector_number: string };
+export type CollectionIdentifier = { id: string } | { name: string } | { set: string; collector_number: string };

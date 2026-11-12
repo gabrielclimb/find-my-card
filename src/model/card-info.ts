@@ -1,5 +1,5 @@
 import type { ScryfallCard } from "../scryfall/types";
-import type { CardInfo } from "./types";
+import { type CardInfo, isRarity } from "./types";
 
 export function toCardInfo(card: ScryfallCard): CardInfo {
 	const front = card.card_faces?.[0];
@@ -22,6 +22,7 @@ export function toCardInfo(card: ScryfallCard): CardInfo {
 		set: card.set ?? "",
 		setName: card.set_name,
 		collectorNumber: card.collector_number ?? "",
+		...(isRarity(card.rarity) ? { rarity: card.rarity } : {}),
 		faces,
 		printsUri: card.prints_search_uri,
 	};

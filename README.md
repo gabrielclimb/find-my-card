@@ -14,12 +14,14 @@ PWA para consultar uma lista de cartas de Magic enquanto você procura no bulk d
 
   A quantidade é opcional (também aceita `2x`), e `(SET) número` fixa a impressão. O texto exportado do Moxfield (Export → Copy for Moxfield) funciona como está. Linhas vazias e cabeçalhos como `SIDEBOARD:` são ignorados, e as linhas em outro formato aparecem como não reconhecidas.
 - **Visualização** por imagens, com grade de 2 a 6 colunas, ou por nomes.
-- **Organização** por cor e nome (grupos de cor, em ordem alfabética dentro de cada um) ou só por nome. A cor é a da carta, lida na face frontal. Os grupos seguem esta ordem: Branco, Azul, Preto, Vermelho, Verde, Multicolor, Incolor, Terrenos e Não encontradas.
+- **Organização** por cor, por raridade ou só por nome, sempre em ordem alfabética dentro de cada grupo. A cor é a da carta, lida na face frontal, e os grupos seguem esta ordem: Branco, Azul, Preto, Vermelho, Verde, Multicolor, Incolor, Terrenos e Não encontradas. A raridade é a da impressão escolhida, de Mítica a Comum (mais Especial para as impressões de raridade especial ou bônus).
+- **Filtro por raridade:** mostra só as cartas comuns, incomuns, raras ou míticas (dá para combinar). Uma barra no topo indica o filtro ativo e o remove com um toque.
 - **Toque** amplia a carta e o botão voltar fecha a ampliação, mantendo a posição da lista. Com a carta ampliada, **deslizar para os lados** passa para a anterior ou a próxima. **Segurar** a carta a marca como encontrada.
 - **Busca** por parte do nome, sem diferenciar maiúsculas nem acentos.
 - **Cartas de duas faces:** botão para virar. **Outras artes:** escolher outra impressão da mesma carta.
 - **Tela acesa** durante a consulta, pela Wake Lock API, com um ícone de sol na barra que indica quando está ativa.
 - **Modo offline opcional, por lista:** baixa as imagens para o aparelho. O app em si sempre funciona offline.
+- **Compartilhar** pelo menu da lista: **Compartilhar link** gera um link com a lista inteira, comprimida dentro da própria URL (sem servidor), que abre a tela de importação já preenchida. **Copiar texto** copia uma carta por linha, no mesmo formato da importação. Os dois levam quantidade, nome e a impressão escolhida, mas não o que já foi marcado como encontrado. Um link de 100 cartas tem cerca de 2 mil caracteres.
 - **Múltiplas listas,** e as preferências de visualização ficam salvas. Os dados ficam só no aparelho, no navegador usado para abrir o app.
 
 Os dados das cartas e as imagens vêm do [Scryfall](https://scryfall.com/). O parser e o cliente do Scryfall foram adaptados de [mtg-deck-visualizer](https://github.com/gabrielclimb/mtg-deck-visualizer).
@@ -29,7 +31,7 @@ Os dados das cartas e as imagens vêm do [Scryfall](https://scryfall.com/). O pa
 ```bash
 npm install
 npm run dev      # servidor de desenvolvimento (sem service worker)
-npm test         # testes do parser e do agrupamento
+npm test         # testes do parser, do agrupamento e do compartilhamento
 npm run build    # checagem de tipos + build de produção em dist/
 npm run preview  # serve o build, com service worker, em http://localhost:4173
 ```

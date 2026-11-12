@@ -2,7 +2,7 @@ import { entryKey, type ParsedEntry } from "../import/parse-list";
 import { COLLECTION_BATCH_SIZE, fetchCollection, fetchNamedFuzzy } from "../scryfall/client";
 import type { CollectionIdentifier, ScryfallCard } from "../scryfall/types";
 import { toCardInfo } from "./card-info";
-import type { ListItem } from "./types";
+import { isRarity, type ListItem, type Rarity } from "./types";
 
 function norm(name: string): string {
 	return name.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
@@ -75,6 +75,21 @@ export async function resolveItems(items: ListItem[], onProgress?: (p: ResolvePr
 		}
 		done++;
 		onProgress?.({ done, total });
+	}
+	return out;
+}
+
+/**
+ * Listas salvas antes da raridade existir: busca a raridade das impressões já escolhidas, pelo id do Scryfall.
+ * Retorna id da carta → raridade; ids que falharem ficam de fora.
+ */
+export async function fetchMissingRarities(items: ListItem[]): Promise<Map<string, Rarity>> {
+	const ids = [...new Set(items.flatMap((i) => (i.card && !i.card.rarity ? [i.card.id] : [])))];
+	const out = new Map<string, Rarity>();
+	for (let start = 0; start < ids.length; start += COLLECTION_BATCH_SIZE) {
+		const batch = ids.slice(start, start + COLLECTION_BATCH_SIZE);
+		const { cards } = await fetchCollection(batch.map((id) => ({ id })));
+		for (const card of cards) if (isRarity(card.rarity)) out.set(card.id, card.rarity);
 	}
 	return out;
 }

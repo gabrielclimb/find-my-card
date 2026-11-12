@@ -3,11 +3,17 @@ import { HomeScreen } from "./view/HomeScreen";
 import { ImportScreen } from "./view/ImportScreen";
 import { ListScreen } from "./view/ListScreen";
 
-export type Route = { name: "home" } | { name: "new" } | { name: "edit"; id: string } | { name: "list"; id: string };
+export type Route =
+	| { name: "home" }
+	| { name: "new" }
+	| { name: "import"; data: string }
+	| { name: "edit"; id: string }
+	| { name: "list"; id: string };
 
 function parseHash(hash: string): Route {
 	const [, name, id] = hash.replace(/^#/, "").split("/");
 	if (name === "new") return { name: "new" };
+	if (name === "import" && id) return { name: "import", data: id };
 	if (name === "edit" && id) return { name: "edit", id: decodeURIComponent(id) };
 	if (name === "list" && id) return { name: "list", id: decodeURIComponent(id) };
 	return { name: "home" };
@@ -35,6 +41,8 @@ export function App() {
 	switch (route.name) {
 		case "new":
 			return <ImportScreen />;
+		case "import":
+			return <ImportScreen key={route.data} shared={route.data} />;
 		case "edit":
 			return <ImportScreen key={route.id} listId={route.id} />;
 		case "list":
