@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { navigate } from "../app";
-import { countQuantities, filterItems, groupItems, type Group } from "../lib/grouping";
+import { countQuantities, filterItems, groupItems, RARITY_FILTERS, type Group } from "../lib/grouping";
 import { cacheImages, listImageUrls, releaseImages, requestPersistentStorage } from "../lib/offline";
 import { forgetPrefs, loadPrefs, savePrefs, type ViewPrefs } from "../lib/prefs";
 import { useWakeLock } from "../lib/wake-lock";
 import { cardImages } from "../model/card-info";
+import { fetchMissingRarities } from "../model/resolve";
 import { deleteList, getAllLists, getList, saveList } from "../model/store";
 import type { CardInfo, CardList, ListItem } from "../model/types";
+import { LONG_LINK_CHARS, listToText, shareUrl } from "../share/share-list";
 import { CardGrid } from "./CardGrid";
 import { CardOverlay, type OverlayNav } from "./CardOverlay";
 import { useBackDismiss } from "./hooks";
@@ -75,6 +77,25 @@ export function ListScreen({ listId }: { listId: string }) {
 		setOffline((s) => ({ ...s, busy: false, failed }));
 	}, []);
 
+	// Listas salvas antes da raridade existir: completa a raridade uma vez ao abrir.
+	const listLoaded = list !== null;
+	useEffect(() => {
+		const current = listRef.current;
+		if (!current || !navigator.onLine || !current.items.some((i) => i.card && !i.card.rarity)) return;
+		void fetchMissingRarities(current.items)
+			.then((rarities) => {
+				if (rarities.size === 0) return;
+				updateList((l) => ({
+					...l,
+					items: l.items.map((i) => {
+						const rarity = i.card && !i.card.rarity ? rarities.get(i.card.id) : undefined;
+						return rarity && i.card ? { ...i, card: { ...i.card, rarity } } : i;
+					}),
+				}));
+			})
+			.catch(() => undefined);
+	}, [listLoaded, updateList]);
+
 	// Lista offline: ao abrir, completa imagens que faltem (após reimportar ou trocar arte).
 	const offlineEnabled = list?.offline ?? false;
 	useEffect(() => {
@@ -121,6 +142,32 @@ export function ListScreen({ listId }: { listId: string }) {
 		}
 	};
 
+	const shareLink = async () => {
+		const current = listRef.current;
+		if (!current) return;
+		const url = await shareUrl(current);
+		if (url.length > LONG_LINK_CHARS && !confirm("Lista grande: o link pode não abrir em alguns apps. Prefira “Copiar texto”. Compartilhar o link mesmo assim?")) return;
+		if (navigator.share) {
+			try {
+				await navigator.share({ title: current.name, url });
+				return;
+			} catch (e) {
+				if (e instanceof DOMException && e.name === "AbortError") return;
+				// Outro erro (ex.: navegador recusou): copia o link.
+			}
+		}
+		await copy(url, "Link copiado");
+	};
+
+	const copy = async (text: string, done: string) => {
+		try {
+			await navigator.clipboard.writeText(text);
+			setToast(done);
+		} catch {
+			setToast("Não foi possível copiar");
+		}
+	};
+
 	const removeList = async () => {
 		const current = listRef.current;
 		if (!current || !confirm(`Excluir a lista “${current.name}”?`)) return;
@@ -134,8 +181,8 @@ export function ListScreen({ listId }: { listId: string }) {
 	};
 
 	const visible = useMemo(
-		() => (list ? groupItems(filterItems(list.items, { query, hideFound: prefs.hideFound }), prefs.sort) : []),
-		[list, query, prefs.hideFound, prefs.sort],
+		() => (list ? groupItems(filterItems(list.items, { query, hideFound: prefs.hideFound, rarities: prefs.rarities }), prefs.sort) : []),
+		[list, query, prefs.hideFound, prefs.rarities, prefs.sort],
 	);
 
 	visibleRef.current = visible;
@@ -171,6 +218,14 @@ export function ListScreen({ listId }: { listId: string }) {
 	};
 	const showHeaders = prefs.sort !== "name";
 	const visibleCount = visible.reduce((n, g) => n + g.items.length, 0);
+	const rarityLabels = RARITY_FILTERS.filter((r) => prefs.rarities.includes(r.value)).map((r) => r.label);
+	const emptyMessage = query
+		? `Nenhuma carta com “${query}”${rarityLabels.length ? " nas raridades escolhidas" : ""}.`
+		: rarityLabels.length && list.items.length > 0
+			? `Nenhuma carta ${prefs.hideFound ? "faltando " : ""}com raridade ${rarityLabels.join(", ")}.`
+			: prefs.hideFound && list.items.length > 0
+				? "Todas as cartas foram encontradas. 🎉"
+				: "Lista vazia.";
 
 	return (
 		<div class="screen" style={{ "--cols": String(prefs.columns) }}>
@@ -235,11 +290,20 @@ export function ListScreen({ listId }: { listId: string }) {
 				</button>
 			</header>
 
+			{rarityLabels.length > 0 && (
+				<div class="filter-bar">
+					<span class="filter-bar-text">Raridade: {rarityLabels.join(", ")}</span>
+					<button class="icon-btn" aria-label="Remover filtro de raridade" onClick={() => changePrefs({ rarities: [] })}>
+						<CloseIcon size={20} />
+					</button>
+				</div>
+			)}
+
 			{!online && !list.offline && <div class="banner">Sem internet: imagens não salvas podem não aparecer.</div>}
 
 			<main class={`content view-${prefs.view}`}>
 				{visibleCount === 0 ? (
-					<p class="empty">{query ? `Nenhuma carta com “${query}”.` : prefs.hideFound && list.items.length > 0 ? "Todas as cartas foram encontradas. 🎉" : "Lista vazia."}</p>
+					<p class="empty">{emptyMessage}</p>
 				) : prefs.view === "images" ? (
 					<CardGrid groups={visible} showHeaders={showHeaders} onOpen={openItem} onToggleFound={toggleFound} />
 				) : (
@@ -281,6 +345,8 @@ export function ListScreen({ listId }: { listId: string }) {
 					onToggleOffline={(on) => void toggleOffline(on)}
 					onEdit={() => navigate(`/edit/${encodeURIComponent(list.id)}`, true)}
 					onResetFound={() => updateList((l) => ({ ...l, items: l.items.map((i) => ({ ...i, found: false })) }))}
+					onShareLink={() => void shareLink()}
+					onCopyText={() => void copy(listToText(list), "Lista copiada")}
 					onDelete={() => void removeList()}
 					onClose={() => history.back()}
 				/>

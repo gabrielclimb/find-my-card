@@ -1,4 +1,5 @@
-import type { SortMode } from "./grouping";
+import { isRarity, type Rarity } from "../model/types";
+import { SORT_MODES, type SortMode } from "./grouping";
 
 export type ViewMode = "images" | "names";
 
@@ -8,6 +9,8 @@ export interface ViewPrefs {
 	columns: number;
 	hideFound: boolean;
 	keepAwake: boolean;
+	/** Filtro de raridade; vazio mostra todas. */
+	rarities: Rarity[];
 }
 
 export const DEFAULT_PREFS: ViewPrefs = {
@@ -16,6 +19,7 @@ export const DEFAULT_PREFS: ViewPrefs = {
 	columns: 3,
 	hideFound: false,
 	keepAwake: true,
+	rarities: [],
 };
 
 export const MIN_COLUMNS = 2;
@@ -44,8 +48,9 @@ function write(key: string, value: ViewPrefs): void {
 /** Preferências da lista; listas novas herdam as últimas usadas. */
 export function loadPrefs(listId: string): ViewPrefs {
 	const prefs = { ...DEFAULT_PREFS, ...read(GLOBAL_KEY), ...read(listKey(listId)) };
-	// O modo "color" (só cor, ordem de importação) foi removido; vira "color-name".
-	if (prefs.sort !== "name") prefs.sort = "color-name";
+	// Modos desconhecidos (ex.: "color", já removido) voltam ao padrão.
+	if (!SORT_MODES.includes(prefs.sort)) prefs.sort = "color-name";
+	prefs.rarities = Array.isArray(prefs.rarities) ? [...new Set(prefs.rarities.filter(isRarity))] : [];
 	return prefs;
 }
 

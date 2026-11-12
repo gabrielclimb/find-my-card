@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { colorGroup, countQuantities, filterItems, groupItems } from "../src/lib/grouping";
+import { colorGroup, countQuantities, filterItems, groupItems, rarityGroup } from "../src/lib/grouping";
 import { toCardInfo } from "../src/model/card-info";
-import type { CardInfo, ListItem } from "../src/model/types";
+import type { CardInfo, ListItem, Rarity } from "../src/model/types";
 
-function card(name: string, colors: string[], typeLine = "Instant"): CardInfo {
-	return { id: name, name, colors, typeLine, set: "tst", collectorNumber: "1", faces: [{ name }] };
+function card(name: string, colors: string[], typeLine = "Instant", rarity?: Rarity): CardInfo {
+	return { id: name, name, colors, typeLine, set: "tst", collectorNumber: "1", faces: [{ name }], ...(rarity ? { rarity } : {}) };
 }
 
 function item(name: string, order: number, c?: CardInfo, extra: Partial<ListItem> = {}): ListItem {
@@ -90,5 +90,48 @@ describe("filterItems / countQuantities", () => {
 
 	it("conta cópias encontradas", () => {
 		expect(countQuantities(items)).toEqual({ found: 4, total: 6 });
+	});
+});
+
+describe("raridade", () => {
+	const items = [
+		item("Shock", 0, card("Shock", ["R"], "Instant", "common")),
+		item("Ragavan", 1, card("Ragavan", ["R"], "Creature", "mythic")),
+		item("Abrade", 2, card("Abrade", ["R"], "Instant", "common")),
+		item("Counterspell", 3, card("Counterspell", ["U"], "Instant", "uncommon")),
+		item("Old Card", 4, card("Old Card", ["U"])),
+		item("Typo Card", 5),
+		item("Sol Ring", 6, card("Sol Ring", [], "Artifact", "special")),
+		item("Thoughtseize", 7, card("Thoughtseize", ["B"], "Instant", "rare")),
+	];
+
+	it("lê a raridade do Scryfall e ignora valores desconhecidos", () => {
+		expect(toCardInfo({ id: "1", name: "Opt", rarity: "common" }).rarity).toBe("common");
+		expect(toCardInfo({ id: "1", name: "Opt", rarity: "weird" }).rarity).toBeUndefined();
+	});
+
+	it("classifica por raridade, com especial e sem dados", () => {
+		expect(rarityGroup(card("A", [], "Instant", "bonus"))).toBe("r-special");
+		expect(rarityGroup(card("A", []))).toBe("r-none");
+		expect(rarityGroup(undefined)).toBe("X");
+	});
+
+	it("agrupa da mítica para a comum e ordena por nome", () => {
+		const groups = groupItems(items, "rarity-name");
+		expect(groups.map((g) => [g.key, g.label, g.items.map((i) => i.name)])).toEqual([
+			["r-mythic", "Mítica", ["Ragavan"]],
+			["r-rare", "Rara", ["Thoughtseize"]],
+			["r-uncommon", "Incomum", ["Counterspell"]],
+			["r-common", "Comum", ["Abrade", "Shock"]],
+			["r-special", "Especial", ["Sol Ring"]],
+			["r-none", "Sem raridade", ["Old Card"]],
+			["X", "Não encontradas", ["Typo Card"]],
+		]);
+	});
+
+	it("filtra pelas raridades escolhidas; vazio mostra todas", () => {
+		expect(filterItems(items, { rarities: ["rare", "mythic"] }).map((i) => i.name)).toEqual(["Ragavan", "Thoughtseize"]);
+		expect(filterItems(items, { rarities: [] })).toHaveLength(items.length);
+		expect(filterItems(items, { rarities: ["common"], query: "sh" }).map((i) => i.name)).toEqual(["Shock"]);
 	});
 });

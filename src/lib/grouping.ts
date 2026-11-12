@@ -1,6 +1,8 @@
-import type { CardInfo, ListItem } from "../model/types";
+import type { CardInfo, ListItem, Rarity } from "../model/types";
 
-export type SortMode = "color-name" | "name";
+export type SortMode = "color-name" | "rarity-name" | "name";
+
+export const SORT_MODES: readonly SortMode[] = ["color-name", "rarity-name", "name"];
 
 export type ColorGroup = "W" | "U" | "B" | "R" | "G" | "M" | "C" | "L" | "X";
 
@@ -17,6 +19,49 @@ export const GROUP_LABELS: Record<ColorGroup, string> = {
 	L: "Terrenos",
 	X: "Não encontradas",
 };
+
+/** Chaves com prefixo para não colidir com as de cor (ex.: "M" já é Multicolor). */
+export type RarityGroup = "r-mythic" | "r-rare" | "r-uncommon" | "r-common" | "r-special" | "r-none" | "X";
+
+export const RARITY_GROUP_ORDER: RarityGroup[] = ["r-mythic", "r-rare", "r-uncommon", "r-common", "r-special", "r-none", "X"];
+
+export const RARITY_GROUP_LABELS: Record<RarityGroup, string> = {
+	"r-mythic": "Mítica",
+	"r-rare": "Rara",
+	"r-uncommon": "Incomum",
+	"r-common": "Comum",
+	"r-special": "Especial",
+	"r-none": "Sem raridade",
+	X: "Não encontradas",
+};
+
+/** Raridades oferecidas no filtro, com o rótulo curto usado nos chips. */
+export const RARITY_FILTERS: { value: Rarity; label: string }[] = [
+	{ value: "common", label: "Comum" },
+	{ value: "uncommon", label: "Incomum" },
+	{ value: "rare", label: "Rara" },
+	{ value: "mythic", label: "Mítica" },
+];
+
+/** Grupo pela raridade da impressão. "special" e "bonus" ficam juntas em Especial. */
+export function rarityGroup(card: CardInfo | undefined): RarityGroup {
+	if (!card) return "X";
+	switch (card.rarity) {
+		case "mythic":
+			return "r-mythic";
+		case "rare":
+			return "r-rare";
+		case "uncommon":
+			return "r-uncommon";
+		case "common":
+			return "r-common";
+		case "special":
+		case "bonus":
+			return "r-special";
+		default:
+			return "r-none";
+	}
+}
 
 /** Grupo pela cor da carta (face frontal). Terrenos têm precedência sobre a cor. */
 export function colorGroup(card: CardInfo | undefined): ColorGroup {
@@ -43,7 +88,7 @@ function byName(a: ListItem, b: ListItem): number {
 }
 
 export interface Group {
-	key: ColorGroup | "all";
+	key: ColorGroup | RarityGroup | "all";
 	label: string;
 	items: ListItem[];
 }
@@ -51,12 +96,16 @@ export interface Group {
 export interface ViewFilter {
 	query?: string;
 	hideFound?: boolean;
+	/** Vazio ou ausente: todas as raridades. */
+	rarities?: readonly Rarity[];
 }
 
-export function filterItems(items: ListItem[], { query, hideFound }: ViewFilter): ListItem[] {
+export function filterItems(items: ListItem[], { query, hideFound, rarities }: ViewFilter): ListItem[] {
 	const q = query ? normalizeText(query) : "";
+	const wanted = rarities && rarities.length > 0 ? new Set(rarities) : null;
 	return items.filter((item) => {
 		if (hideFound && item.found) return false;
+		if (wanted && !(item.card?.rarity && wanted.has(item.card.rarity))) return false;
 		if (!q) return true;
 		return normalizeText(displayName(item)).includes(q) || normalizeText(item.name).includes(q);
 	});
@@ -67,17 +116,24 @@ export function groupItems(items: ListItem[], mode: SortMode): Group[] {
 	if (mode === "name") {
 		return [{ key: "all", label: "Todas", items: [...items].sort(byName) }];
 	}
-	const buckets = new Map<ColorGroup, ListItem[]>();
-	for (const item of items) {
-		const g = colorGroup(item.card);
-		const bucket = buckets.get(g);
-		if (bucket) bucket.push(item);
-		else buckets.set(g, [item]);
+	if (mode === "rarity-name") {
+		return bucketBy(items, (i) => rarityGroup(i.card), RARITY_GROUP_ORDER, RARITY_GROUP_LABELS);
 	}
-	return GROUP_ORDER.flatMap((key) => {
+	return bucketBy(items, (i) => colorGroup(i.card), GROUP_ORDER, GROUP_LABELS);
+}
+
+function bucketBy<K extends Group["key"]>(items: ListItem[], keyOf: (item: ListItem) => K, order: K[], labels: Record<K, string>): Group[] {
+	const buckets = new Map<K, ListItem[]>();
+	for (const item of items) {
+		const k = keyOf(item);
+		const bucket = buckets.get(k);
+		if (bucket) bucket.push(item);
+		else buckets.set(k, [item]);
+	}
+	return order.flatMap((key) => {
 		const bucket = buckets.get(key);
 		if (!bucket) return [];
-		return [{ key, label: GROUP_LABELS[key], items: bucket.sort(byName) }];
+		return [{ key, label: labels[key], items: bucket.sort(byName) }];
 	});
 }
 
