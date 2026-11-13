@@ -2,7 +2,8 @@ import { entryKey, type ParsedEntry } from "../import/parse-list";
 import { COLLECTION_BATCH_SIZE, fetchCollection, fetchNamedFuzzy } from "../scryfall/client";
 import type { CollectionIdentifier, ScryfallCard } from "../scryfall/types";
 import { toCardInfo } from "./card-info";
-import { isRarity, type ListItem, type Rarity } from "./types";
+import { pricesStale } from "../lib/price";
+import type { CardInfo, ListItem } from "./types";
 
 function norm(name: string): string {
 	return name.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
@@ -79,17 +80,27 @@ export async function resolveItems(items: ListItem[], onProgress?: (p: ResolvePr
 	return out;
 }
 
+export type CardRefresh = Pick<CardInfo, "rarity" | "prices" | "pricesAt">;
+
+/** Cartas cujos preços passaram de um dia, ou salvas antes de existirem raridade e preço. */
+export function needsRefresh(card: CardInfo | undefined, now = Date.now()): card is CardInfo {
+	return !!card && (!card.rarity || pricesStale(card, now));
+}
+
 /**
- * Listas salvas antes da raridade existir: busca a raridade das impressões já escolhidas, pelo id do Scryfall.
- * Retorna id da carta → raridade; ids que falharem ficam de fora.
+ * Atualiza raridade e preços das impressões já escolhidas, pelo id do Scryfall.
+ * Retorna id da carta → dados novos; ids que falharem ficam de fora.
  */
-export async function fetchMissingRarities(items: ListItem[]): Promise<Map<string, Rarity>> {
-	const ids = [...new Set(items.flatMap((i) => (i.card && !i.card.rarity ? [i.card.id] : [])))];
-	const out = new Map<string, Rarity>();
+export async function fetchCardRefresh(items: ListItem[], now = Date.now()): Promise<Map<string, CardRefresh>> {
+	const ids = [...new Set(items.flatMap((i) => (needsRefresh(i.card, now) ? [i.card.id] : [])))];
+	const out = new Map<string, CardRefresh>();
 	for (let start = 0; start < ids.length; start += COLLECTION_BATCH_SIZE) {
 		const batch = ids.slice(start, start + COLLECTION_BATCH_SIZE);
 		const { cards } = await fetchCollection(batch.map((id) => ({ id })));
-		for (const card of cards) if (isRarity(card.rarity)) out.set(card.id, card.rarity);
+		for (const card of cards) {
+			const { rarity, prices, pricesAt } = toCardInfo(card);
+			out.set(card.id, { ...(rarity ? { rarity } : {}), prices, pricesAt });
+		}
 	}
 	return out;
 }

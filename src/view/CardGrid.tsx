@@ -1,17 +1,19 @@
 import type { Group } from "../lib/grouping";
 import { displayName } from "../lib/grouping";
-import type { ListItem } from "../model/types";
+import { formatPrice } from "../lib/price";
+import type { Currency, ListItem } from "../model/types";
 import { pressHandlers } from "./hooks";
 import { CheckIcon } from "./icons";
 
 interface Props {
 	groups: Group[];
 	showHeaders: boolean;
+	currency: Currency;
 	onOpen: (item: ListItem) => void;
 	onToggleFound: (item: ListItem) => void;
 }
 
-export function CardGrid({ groups, showHeaders, onOpen, onToggleFound }: Props) {
+export function CardGrid({ groups, showHeaders, currency, onOpen, onToggleFound }: Props) {
 	return (
 		<>
 			{groups.map((group) => (
@@ -23,7 +25,7 @@ export function CardGrid({ groups, showHeaders, onOpen, onToggleFound }: Props) 
 					)}
 					<div class="grid">
 						{group.items.map((item) => (
-							<CardTile key={item.key} item={item} onOpen={onOpen} onToggleFound={onToggleFound} />
+							<CardTile key={item.key} item={item} currency={currency} onOpen={onOpen} onToggleFound={onToggleFound} />
 						))}
 					</div>
 				</section>
@@ -32,14 +34,15 @@ export function CardGrid({ groups, showHeaders, onOpen, onToggleFound }: Props) 
 	);
 }
 
-function CardTile({ item, onOpen, onToggleFound }: { item: ListItem; onOpen: Props["onOpen"]; onToggleFound: Props["onToggleFound"] }) {
+function CardTile({ item, currency, onOpen, onToggleFound }: { item: ListItem; currency: Currency; onOpen: Props["onOpen"]; onToggleFound: Props["onToggleFound"] }) {
 	const image = item.card?.faces[0]?.image;
 	const name = displayName(item);
+	const price = formatPrice(item.card, currency);
 	return (
 		<button
 			type="button"
 			class={`tile${item.found ? " is-found" : ""}`}
-			aria-label={`${name}${item.quantity > 1 ? `, ${item.quantity} cópias` : ""}${item.found ? ", encontrada" : ""}`}
+			aria-label={`${name}${item.quantity > 1 ? `, ${item.quantity} cópias` : ""}${price ? `, ${price}` : ""}${item.found ? ", encontrada" : ""}`}
 			{...pressHandlers(
 				() => onOpen(item),
 				() => onToggleFound(item),
@@ -62,6 +65,7 @@ function CardTile({ item, onOpen, onToggleFound }: { item: ListItem; onOpen: Pro
 				)}
 			</span>
 			<span class="tile-name">{name}</span>
+			{item.card && <span class="tile-price">{price ?? "sem preço"}</span>}
 		</button>
 	);
 }

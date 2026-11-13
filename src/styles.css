@@ -323,6 +323,17 @@ button {
 	filter: grayscale(0.6);
 }
 
+.tile-price {
+	margin-top: -2px;
+	color: var(--muted);
+	font-size: clamp(10px, calc(22px - var(--cols) * 2px), 13px);
+	font-variant-numeric: tabular-nums;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .tile.is-found .tile-name {
 	color: var(--muted);
 	text-decoration: line-through;
@@ -421,6 +432,13 @@ button {
 	text-decoration: line-through;
 }
 
+.name-price {
+	flex: none;
+	color: var(--muted);
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+}
+
 .name-qty {
 	flex: none;
 	color: var(--accent);
@@ -507,6 +525,12 @@ button {
 	align-items: center;
 	padding-bottom: 8px;
 	color: #a3a7b0;
+}
+
+.print-price {
+	display: block;
+	color: #f4f1ea;
+	font-variant-numeric: tabular-nums;
 }
 
 .prints-grid {

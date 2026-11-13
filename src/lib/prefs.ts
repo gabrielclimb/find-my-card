@@ -1,4 +1,5 @@
-import { isRarity, type Rarity } from "../model/types";
+import { type Currency, isRarity, type Rarity } from "../model/types";
+import { CURRENCIES } from "./price";
 import { SORT_MODES, type SortMode } from "./grouping";
 
 export type ViewMode = "images" | "names";
@@ -11,6 +12,7 @@ export interface ViewPrefs {
 	keepAwake: boolean;
 	/** Filtro de raridade; vazio mostra todas. */
 	rarities: Rarity[];
+	currency: Currency;
 }
 
 export const DEFAULT_PREFS: ViewPrefs = {
@@ -20,6 +22,7 @@ export const DEFAULT_PREFS: ViewPrefs = {
 	hideFound: false,
 	keepAwake: true,
 	rarities: [],
+	currency: "usd",
 };
 
 export const MIN_COLUMNS = 2;
@@ -50,6 +53,7 @@ export function loadPrefs(listId: string): ViewPrefs {
 	const prefs = { ...DEFAULT_PREFS, ...read(GLOBAL_KEY), ...read(listKey(listId)) };
 	// Modos desconhecidos (ex.: "color", já removido) voltam ao padrão.
 	if (!SORT_MODES.includes(prefs.sort)) prefs.sort = "color-name";
+	if (!CURRENCIES.includes(prefs.currency)) prefs.currency = "usd";
 	prefs.rarities = Array.isArray(prefs.rarities) ? [...new Set(prefs.rarities.filter(isRarity))] : [];
 	return prefs;
 }

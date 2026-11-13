@@ -1,3 +1,4 @@
+import { pricesFromScryfall } from "../lib/price";
 import type { ScryfallCard } from "../scryfall/types";
 import { type CardInfo, isRarity } from "./types";
 
@@ -23,6 +24,8 @@ export function toCardInfo(card: ScryfallCard): CardInfo {
 		setName: card.set_name,
 		collectorNumber: card.collector_number ?? "",
 		...(isRarity(card.rarity) ? { rarity: card.rarity } : {}),
+		prices: pricesFromScryfall(card.prices),
+		pricesAt: Date.now(),
 		faces,
 		printsUri: card.prints_search_uri,
 	};

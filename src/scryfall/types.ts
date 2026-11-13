@@ -6,6 +6,16 @@ export interface ScryfallImageUris {
 	large?: string;
 }
 
+/** Preços do dia, como strings decimais; `null` quando não há oferta. */
+export interface ScryfallPrices {
+	usd?: string | null;
+	usd_foil?: string | null;
+	usd_etched?: string | null;
+	eur?: string | null;
+	eur_foil?: string | null;
+	eur_etched?: string | null;
+}
+
 export interface ScryfallCardFace {
 	name?: string;
 	type_line?: string;
@@ -26,6 +36,7 @@ export interface ScryfallCard {
 	prints_search_uri?: string;
 	released_at?: string;
 	rarity?: string;
+	prices?: ScryfallPrices;
 }
 
 export interface ScryfallList<T> {
