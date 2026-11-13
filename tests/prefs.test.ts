@@ -22,4 +22,11 @@ describe("loadPrefs", () => {
 		expect(loadPrefs("b").rarities).toEqual([]);
 		expect(loadPrefs("c").rarities).toEqual([]);
 	});
+
+	it("aceita só moedas conhecidas", () => {
+		store["fmc:prefs:a"] = JSON.stringify({ currency: "eur" });
+		store["fmc:prefs:b"] = JSON.stringify({ currency: "brl" });
+		expect(loadPrefs("a").currency).toBe("eur");
+		expect(loadPrefs("b").currency).toBe("usd");
+	});
 });

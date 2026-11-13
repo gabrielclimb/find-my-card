@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { displayName } from "../lib/grouping";
+import { formatPrice, pricesFromScryfall } from "../lib/price";
 import { toCardInfo } from "../model/card-info";
 import { resolveItems } from "../model/resolve";
-import type { CardInfo, ListItem } from "../model/types";
+import type { CardInfo, Currency, ListItem } from "../model/types";
 import { fetchPrints } from "../scryfall/client";
 import type { ScryfallCard } from "../scryfall/types";
 import { ArtIcon, BackIcon, CheckIcon, CloseIcon, FlipIcon } from "./icons";
@@ -21,6 +22,7 @@ const SWIPE_THRESHOLD_PX = 60;
 
 interface Props {
 	item: ListItem;
+	currency: Currency;
 	nav: OverlayNav;
 	onClose: () => void;
 	onToggleFound: () => void;
@@ -29,7 +31,7 @@ interface Props {
 	onRemove: () => void;
 }
 
-export function CardOverlay({ item, nav, onClose, onToggleFound, onChangeCard, onReplaceItem, onRemove }: Props) {
+export function CardOverlay({ item, currency, nav, onClose, onToggleFound, onChangeCard, onReplaceItem, onRemove }: Props) {
 	const [face, setFace] = useState(0);
 	const [mode, setMode] = useState<"card" | "prints">("card");
 	const [dragX, setDragX] = useState(0);
@@ -102,6 +104,7 @@ export function CardOverlay({ item, nav, onClose, onToggleFound, onChangeCard, o
 						{nav.total > 1 ? `${nav.index + 1} de ${nav.total} · ` : ""}
 						{item.quantity > 1 ? `${item.quantity} cópias · ` : ""}
 						{card ? `${card.setName ?? card.set.toUpperCase()} #${card.collectorNumber}` : ""}
+						{card && formatPrice(card, currency) ? ` · ${formatPrice(card, currency)}` : ""}
 					</small>
 				</div>
 				<button class="icon-btn" aria-label="Fechar" onClick={onClose}>
@@ -113,6 +116,7 @@ export function CardOverlay({ item, nav, onClose, onToggleFound, onChangeCard, o
 				<PrintPicker
 					printsUri={card.printsUri}
 					currentId={card.id}
+					currency={currency}
 					onPick={(print) => {
 						onChangeCard(toCardInfo(print));
 						setFace(0);
@@ -173,14 +177,21 @@ export function CardOverlay({ item, nav, onClose, onToggleFound, onChangeCard, o
 	);
 }
 
+/** Preço de uma impressão ainda não escolhida, direto do resultado do Scryfall. */
+function priceLabel(print: ScryfallCard, currency: Currency): string | undefined {
+	return formatPrice({ prices: pricesFromScryfall(print.prices) }, currency);
+}
+
 function PrintPicker({
 	printsUri,
 	currentId,
+	currency,
 	onPick,
 	onCancel,
 }: {
 	printsUri: string;
 	currentId: string;
+	currency: Currency;
 	onPick: (card: ScryfallCard) => void;
 	onCancel: () => void;
 }) {
@@ -230,6 +241,7 @@ function PrintPicker({
 							)}
 							<small>
 								{p.set?.toUpperCase()} #{p.collector_number}
+								{priceLabel(p, currency) && <span class="print-price">{priceLabel(p, currency)}</span>}
 							</small>
 						</button>
 					);

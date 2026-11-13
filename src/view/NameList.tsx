@@ -1,15 +1,17 @@
 import { colorGroup, displayName, type Group } from "../lib/grouping";
-import type { ListItem } from "../model/types";
+import { formatPrice } from "../lib/price";
+import type { Currency, ListItem } from "../model/types";
 import { CheckIcon } from "./icons";
 
 interface Props {
 	groups: Group[];
 	showHeaders: boolean;
+	currency: Currency;
 	onOpen: (item: ListItem) => void;
 	onToggleFound: (item: ListItem) => void;
 }
 
-export function NameList({ groups, showHeaders, onOpen, onToggleFound }: Props) {
+export function NameList({ groups, showHeaders, currency, onOpen, onToggleFound }: Props) {
 	return (
 		<>
 			{groups.map((group) => (
@@ -36,6 +38,7 @@ export function NameList({ groups, showHeaders, onOpen, onToggleFound }: Props) 
 									<span class={`pip color-${colorGroup(item.card)}`} aria-hidden="true" />
 									<span class="name-text">{displayName(item)}</span>
 									{item.quantity > 1 && <span class="name-qty">×{item.quantity}</span>}
+									{item.card && <span class="name-price">{formatPrice(item.card, currency) ?? "–"}</span>}
 								</button>
 							</li>
 						))}

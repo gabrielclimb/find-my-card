@@ -17,6 +17,7 @@ PWA para consultar uma lista de cartas de Magic enquanto você procura no bulk d
 - **Organização** por cor, por raridade ou só por nome, sempre em ordem alfabética dentro de cada grupo. A cor é a da carta, lida na face frontal, e os grupos seguem esta ordem: Branco, Azul, Preto, Vermelho, Verde, Multicolor, Incolor, Terrenos e Não encontradas. A raridade é a da impressão escolhida, de Mítica a Comum (mais Especial para as impressões de raridade especial ou bônus).
 - **Filtro por raridade:** mostra só as cartas comuns, incomuns, raras ou míticas (dá para combinar). Uma barra no topo indica o filtro ativo e o remove com um toque.
 - **Toque** amplia a carta e o botão voltar fecha a ampliação, mantendo a posição da lista. Com a carta ampliada, **deslizar para os lados** passa para a anterior ou a próxima. **Segurar** a carta a marca como encontrada.
+- **Preço** de cada carta embaixo do nome, em US$ (TCGplayer) ou € (Cardmarket), à escolha no menu. É o preço da impressão escolhida (o foil, quando a impressão só existe em foil) e aparece também na ampliação e em "Outras artes". Ao abrir a lista com internet, os preços com mais de um dia são atualizados pelo Scryfall.
 - **Busca** por parte do nome, sem diferenciar maiúsculas nem acentos.
 - **Cartas de duas faces:** botão para virar. **Outras artes:** escolher outra impressão da mesma carta.
 - **Tela acesa** durante a consulta, pela Wake Lock API, com um ícone de sol na barra que indica quando está ativa.
@@ -31,7 +32,7 @@ Os dados das cartas e as imagens vêm do [Scryfall](https://scryfall.com/). O pa
 ```bash
 npm install
 npm run dev      # servidor de desenvolvimento (sem service worker)
-npm test         # testes do parser, do agrupamento e do compartilhamento
+npm test         # testes do parser, do agrupamento, dos preços e do compartilhamento
 npm run build    # checagem de tipos + build de produção em dist/
 npm run preview  # serve o build, com service worker, em http://localhost:4173
 ```

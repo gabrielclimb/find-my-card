@@ -5,7 +5,7 @@ import { cacheImages, listImageUrls, releaseImages, requestPersistentStorage } f
 import { forgetPrefs, loadPrefs, savePrefs, type ViewPrefs } from "../lib/prefs";
 import { useWakeLock } from "../lib/wake-lock";
 import { cardImages } from "../model/card-info";
-import { fetchMissingRarities } from "../model/resolve";
+import { fetchCardRefresh, needsRefresh } from "../model/resolve";
 import { deleteList, getAllLists, getList, saveList } from "../model/store";
 import type { CardInfo, CardList, ListItem } from "../model/types";
 import { LONG_LINK_CHARS, listToText, shareUrl } from "../share/share-list";
@@ -77,19 +77,19 @@ export function ListScreen({ listId }: { listId: string }) {
 		setOffline((s) => ({ ...s, busy: false, failed }));
 	}, []);
 
-	// Listas salvas antes da raridade existir: completa a raridade uma vez ao abrir.
+	// Ao abrir: atualiza preços com mais de um dia e completa a raridade de listas antigas.
 	const listLoaded = list !== null;
 	useEffect(() => {
 		const current = listRef.current;
-		if (!current || !navigator.onLine || !current.items.some((i) => i.card && !i.card.rarity)) return;
-		void fetchMissingRarities(current.items)
-			.then((rarities) => {
-				if (rarities.size === 0) return;
+		if (!current || !navigator.onLine || !current.items.some((i) => needsRefresh(i.card))) return;
+		void fetchCardRefresh(current.items)
+			.then((fresh) => {
+				if (fresh.size === 0) return;
 				updateList((l) => ({
 					...l,
 					items: l.items.map((i) => {
-						const rarity = i.card && !i.card.rarity ? rarities.get(i.card.id) : undefined;
-						return rarity && i.card ? { ...i, card: { ...i.card, rarity } } : i;
+						const data = i.card ? fresh.get(i.card.id) : undefined;
+						return data && i.card ? { ...i, card: { ...i.card, ...data } } : i;
 					}),
 				}));
 			})
@@ -305,9 +305,9 @@ export function ListScreen({ listId }: { listId: string }) {
 				{visibleCount === 0 ? (
 					<p class="empty">{emptyMessage}</p>
 				) : prefs.view === "images" ? (
-					<CardGrid groups={visible} showHeaders={showHeaders} onOpen={openItem} onToggleFound={toggleFound} />
+					<CardGrid groups={visible} showHeaders={showHeaders} currency={prefs.currency} onOpen={openItem} onToggleFound={toggleFound} />
 				) : (
-					<NameList groups={visible} showHeaders={showHeaders} onOpen={openItem} onToggleFound={toggleFound} />
+					<NameList groups={visible} showHeaders={showHeaders} currency={prefs.currency} onOpen={openItem} onToggleFound={toggleFound} />
 				)}
 				{prefs.view === "images" && visibleCount > 0 && <p class="hint">Toque para ampliar · segure para marcar como encontrada</p>}
 			</main>
@@ -316,6 +316,7 @@ export function ListScreen({ listId }: { listId: string }) {
 				<CardOverlay
 					key={openItemData.key}
 					item={openItemData}
+					currency={prefs.currency}
 					nav={nav}
 					onClose={() => history.back()}
 					onToggleFound={() => toggleFound(openItemData)}

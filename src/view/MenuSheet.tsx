@@ -4,7 +4,7 @@ import { offlineSupported, storageEstimate } from "../lib/offline";
 import { MAX_COLUMNS, MIN_COLUMNS, type ViewMode, type ViewPrefs } from "../lib/prefs";
 import type { WakeLockState } from "../lib/wake-lock";
 import { CopyIcon, ShareIcon } from "./icons";
-import type { CardList, Rarity } from "../model/types";
+import type { CardList, Currency, Rarity } from "../model/types";
 
 export interface OfflineStatus {
 	busy: boolean;
@@ -33,6 +33,11 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 	{ value: "color-name", label: "Cor" },
 	{ value: "rarity-name", label: "Raridade" },
 	{ value: "name", label: "Nome" },
+];
+
+const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
+	{ value: "usd", label: "US$ (TCGplayer)" },
+	{ value: "eur", label: "€ (Cardmarket)" },
 ];
 
 const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
@@ -83,6 +88,11 @@ export function MenuSheet(props: Props) {
 				<div class="field">
 					<span>Filtrar por raridade{prefs.rarities.length === 0 ? " · todas" : ""}</span>
 					<RarityChips value={prefs.rarities} onChange={(rarities) => onPrefs({ rarities })} />
+				</div>
+
+				<div class="field">
+					<span>Preço</span>
+					<Segmented options={CURRENCY_OPTIONS} value={prefs.currency} onChange={(currency) => onPrefs({ currency })} />
 				</div>
 
 				<label class="field">

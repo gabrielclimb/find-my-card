@@ -6,6 +6,16 @@ export function isRarity(value: unknown): value is Rarity {
 	return typeof value === "string" && (RARITIES as readonly string[]).includes(value);
 }
 
+export type Currency = "usd" | "eur";
+
+/** Preços da impressão (TCGplayer em US$, Cardmarket em €), via Scryfall. */
+export interface CardPrices {
+	usd?: number;
+	usdFoil?: number;
+	eur?: number;
+	eurFoil?: number;
+}
+
 export interface CardFaceInfo {
 	name: string;
 	/** Imagem `normal` (488×680) do Scryfall. */
@@ -26,6 +36,9 @@ export interface CardInfo {
 	collectorNumber: string;
 	/** Raridade da impressão. Ausente em listas salvas antes de existir o campo. */
 	rarity?: Rarity;
+	prices?: CardPrices;
+	/** Quando os preços foram lidos do Scryfall (ms). */
+	pricesAt?: number;
 	faces: CardFaceInfo[];
 	printsUri?: string;
 }
