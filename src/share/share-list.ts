@@ -37,6 +37,21 @@ export function listToText(list: Pick<CardList, "items">): string {
 		.join("\n");
 }
 
+/**
+ * Texto de origem da lista, usado por "Editar lista" depois de mudanças feitas na própria lista.
+ * Só escreve a impressão importada (não a arte escolhida), para que cada linha reparseada
+ * gere a mesma `key` do item e a reimportação preserve "encontrada" e a arte.
+ */
+export function listToSource(items: ListItem[]): string {
+	return [...items]
+		.sort((a, b) => a.order - b.order)
+		.map((item) => {
+			const p = item.set && item.collectorNumber ? ` (${item.set.toUpperCase()}) ${item.collectorNumber}` : "";
+			return `${item.quantity} ${item.name}${p}`;
+		})
+		.join("\n");
+}
+
 function toBase64Url(bytes: Uint8Array): string {
 	let bin = "";
 	for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));

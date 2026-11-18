@@ -834,6 +834,43 @@ button {
 	color: var(--danger);
 }
 
+.overlay .btn-danger {
+	border-color: #e5646a;
+	color: #e5646a;
+}
+
+.qty-stepper {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	border: 1px solid #363b45;
+	border-radius: var(--radius);
+	background: #2a2e36;
+	color: #f4f1ea;
+}
+
+.qty-stepper .icon-btn {
+	width: 40px;
+	height: 42px;
+	border-radius: var(--radius);
+	color: inherit;
+}
+
+.qty-stepper .icon-btn:active {
+	background: #363b45;
+}
+
+.qty-stepper .icon-btn:disabled {
+	opacity: 0.35;
+}
+
+.qty-value {
+	min-width: 2.5ch;
+	text-align: center;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
 .error-text {
 	margin: 0;
 	color: var(--danger);
@@ -918,17 +955,6 @@ button {
 	background: var(--surface);
 	text-align: left;
 	font-size: 13px;
-}
-
-.file-btn {
-	position: relative;
-	overflow: hidden;
-}
-
-.file-btn input {
-	position: absolute;
-	inset: 0;
-	opacity: 0;
 }
 
 .import-summary {

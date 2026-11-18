@@ -6,7 +6,7 @@ import { resolveItems } from "../model/resolve";
 import type { CardInfo, Currency, ListItem } from "../model/types";
 import { fetchPrints } from "../scryfall/client";
 import type { ScryfallCard } from "../scryfall/types";
-import { ArtIcon, BackIcon, CheckIcon, CloseIcon, FlipIcon } from "./icons";
+import { ArtIcon, BackIcon, CheckIcon, CloseIcon, FlipIcon, MinusIcon, PlusIcon, TrashIcon } from "./icons";
 
 export interface OverlayNav {
 	index: number;
@@ -28,10 +28,14 @@ interface Props {
 	onToggleFound: () => void;
 	onChangeCard: (card: CardInfo) => void;
 	onReplaceItem: (item: ListItem) => void;
+	onChangeQuantity: (quantity: number) => void;
 	onRemove: () => void;
 }
 
-export function CardOverlay({ item, currency, nav, onClose, onToggleFound, onChangeCard, onReplaceItem, onRemove }: Props) {
+/** Limite do seletor de quantidade no overlay. */
+const MAX_QUANTITY = 99;
+
+export function CardOverlay({ item, currency, nav, onClose, onToggleFound, onChangeCard, onReplaceItem, onChangeQuantity, onRemove }: Props) {
 	const [face, setFace] = useState(0);
 	const [mode, setMode] = useState<"card" | "prints">("card");
 	const [dragX, setDragX] = useState(0);
@@ -168,6 +172,30 @@ export function CardOverlay({ item, currency, nav, onClose, onToggleFound, onCha
 								<ArtIcon size={20} /> Outras artes
 							</button>
 						)}
+						<div class="qty-stepper" role="group" aria-label="Quantidade">
+							<button
+								class="icon-btn"
+								aria-label="Diminuir quantidade"
+								disabled={item.quantity <= 1}
+								onClick={() => onChangeQuantity(item.quantity - 1)}
+							>
+								<MinusIcon size={20} />
+							</button>
+							<span class="qty-value" aria-live="polite">
+								{item.quantity}
+							</span>
+							<button
+								class="icon-btn"
+								aria-label="Aumentar quantidade"
+								disabled={item.quantity >= MAX_QUANTITY}
+								onClick={() => onChangeQuantity(item.quantity + 1)}
+							>
+								<PlusIcon size={20} />
+							</button>
+						</div>
+						<button class="btn btn-danger" onClick={() => confirm(`Remover “${displayName(item)}” da lista?`) && onRemove()}>
+							<TrashIcon size={20} /> Remover
+						</button>
 					</div>
 				</>
 			) : (

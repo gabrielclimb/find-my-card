@@ -8,7 +8,7 @@ import { cardImages } from "../model/card-info";
 import { fetchCardRefresh, needsRefresh } from "../model/resolve";
 import { deleteList, getAllLists, getList, saveList } from "../model/store";
 import type { CardInfo, CardList, ListItem } from "../model/types";
-import { LONG_LINK_CHARS, listToText, shareUrl } from "../share/share-list";
+import { LONG_LINK_CHARS, listToSource, listToText, shareUrl } from "../share/share-list";
 import { CardGrid } from "./CardGrid";
 import { CardOverlay, type OverlayNav } from "./CardOverlay";
 import { useBackDismiss } from "./hooks";
@@ -63,6 +63,16 @@ export function ListScreen({ listId }: { listId: string }) {
 		setList(next);
 		void saveList(next);
 	}, []);
+
+	/** Muda os itens e regenera o texto de origem, para "Editar lista" refletir a mudança. */
+	const editItems = useCallback(
+		(fn: (items: ListItem[]) => ListItem[]) =>
+			updateList((l) => {
+				const items = fn(l.items);
+				return { ...l, items, source: listToSource(items) };
+			}),
+		[updateList],
+	);
 
 	const updateItem = useCallback(
 		(key: string, fn: (i: ListItem) => ListItem) =>
@@ -328,9 +338,13 @@ export function ListScreen({ listId }: { listId: string }) {
 						updateItem(openItemData.key, () => ({ ...replacement, key: openItemData.key }));
 						if (list.offline) void downloadImages(cardImages(replacement.card));
 					}}
+					onChangeQuantity={(quantity) =>
+						editItems((items) => items.map((i) => (i.key === openItemData.key ? { ...i, quantity } : i)))
+					}
 					onRemove={() => {
 						history.back();
-						updateList((l) => ({ ...l, items: l.items.filter((i) => i.key !== openItemData.key) }));
+						editItems((items) => items.filter((i) => i.key !== openItemData.key));
+						setToast("Carta removida");
 					}}
 				/>
 			)}
