@@ -45,14 +45,6 @@ export function ImportScreen({ listId, shared }: { listId?: string; shared?: str
 	const parsed = useMemo(() => parseCardList(source), [source]);
 	const busy = progress !== null;
 
-	const onFile = async (e: Event) => {
-		const file = (e.currentTarget as HTMLInputElement).files?.[0];
-		if (!file) return;
-		const text = await file.text();
-		setSource(text);
-		if (!name) setName(file.name.replace(/\.[a-z0-9]+$/i, ""));
-	};
-
 	const onSubmit = async (e: Event) => {
 		e.preventDefault();
 		if (parsed.entries.length === 0 || busy) return;
@@ -121,10 +113,6 @@ export function ImportScreen({ listId, shared }: { listId?: string; shared?: str
 						onInput={(e) => setSource(e.currentTarget.value)}
 						disabled={busy}
 					/>
-				</label>
-				<label class="btn btn-secondary file-btn">
-					Abrir arquivo .txt
-					<input type="file" accept=".txt,.md,text/plain" onChange={onFile} disabled={busy} />
 				</label>
 
 				<p class="import-summary">

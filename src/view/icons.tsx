@@ -26,3 +26,5 @@ export const SunIcon = svg(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12
 export const SunOffIcon = svg(<><circle cx="12" cy="12" r="4" /><path d="M3 3l18 18" /></>);
 export const ShareIcon = svg(<><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" /></>);
 export const CopyIcon = svg(<><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></>);
+export const MinusIcon = svg(<path d="M5 12h14" />);
+export const TrashIcon = svg(<><path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /></>);

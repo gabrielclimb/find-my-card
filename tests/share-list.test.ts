@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseCardList } from "../src/import/parse-list";
 import type { CardInfo, ListItem } from "../src/model/types";
-import { decodeShare, encodeShare, listToText } from "../src/share/share-list";
+import { itemsFromEntries } from "../src/model/resolve";
+import { decodeShare, encodeShare, listToSource, listToText } from "../src/share/share-list";
 
 function card(name: string, set: string, collectorNumber: string): CardInfo {
 	return { id: `${set}-${collectorNumber}`, name, colors: [], typeLine: "Instant", set, collectorNumber, faces: [{ name }] };
@@ -63,5 +64,30 @@ describe("encodeShare / decodeShare", () => {
 		await expect(decodeShare("2.abc")).rejects.toThrow();
 		await expect(decodeShare("1.!!!!")).rejects.toThrow();
 		await expect(decodeShare("1.AAAA")).rejects.toThrow();
+	});
+});
+
+describe("listToSource", () => {
+	const imported = itemsFromEntries(
+		parseCardList(["4 Lightning Bolt", "2 Counterspell (MH2) 267", "Opt", "1 Jötun Grunt", "3 Typo Card"].join("\n")).entries,
+	);
+	const items: ListItem[] = imported.map((i) =>
+		i.name === "Opt" ? { ...i, card: card("Opt", "xln", "65"), artChosen: true } : i,
+	);
+
+	it("escreve só a impressão importada, não a arte escolhida", () => {
+		expect(listToSource(items)).toBe(
+			["4 Lightning Bolt", "2 Counterspell (MH2) 267", "1 Opt", "1 Jötun Grunt", "3 Typo Card"].join("\n"),
+		);
+	});
+
+	it("mantém a ordem de importação", () => {
+		expect(listToSource([...items].reverse()).split("\n")[0]).toBe("4 Lightning Bolt");
+	});
+
+	it("reparseado gera as mesmas chaves e quantidades", () => {
+		const edited = items.filter((i) => i.name !== "Typo Card").map((i) => (i.name === "Opt" ? { ...i, quantity: 3 } : i));
+		const again = itemsFromEntries(parseCardList(listToSource(edited)).entries);
+		expect(again.map((i) => [i.key, i.quantity])).toEqual(edited.map((i) => [i.key, i.quantity]));
 	});
 });
